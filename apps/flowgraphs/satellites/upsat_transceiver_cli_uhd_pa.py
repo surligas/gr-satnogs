@@ -91,7 +91,12 @@ class upsat_transceiver_cli_uhd_pa(gr.top_block):
         self.uhd_usrp_sink_0.set_gain(satnogs.hw_tx_settings[tx_sdr_device]['rf_gain'], 0)
         self.uhd_usrp_sink_0.set_antenna('TX/RX', 0)
         self.uhd_usrp_sink_0.set_bandwidth(samp_rate_tx, 0)
-        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "CTRL", (1 << 6), mask)
+        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "CTRL", (1 << 6), (1 << 6))
+        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "DDR", (1 << 6), (1 << 6))
+        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "ATR_0X", 0, (1 << 6))
+        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "ATR_RX", 0, (1 << 6))
+        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "ATR_TX", 1, (1 << 6))
+        self.uhd_usrp_sink_0.set_gpio_attr("FP0", "ATR_XX", 0, (1 << 6))
         
         self.satnogs_upsat_fsk_frame_encoder_0 = satnogs.upsat_fsk_frame_encoder([0x33]*8 , [0x7A, 0x0E], False, False, False, True, True, 'ABCD', 0, 'ON02GR', 0, 64)
         self.satnogs_udp_msg_source_0 = satnogs.udp_msg_source(bind_addr, recv_port, 1500, 0)

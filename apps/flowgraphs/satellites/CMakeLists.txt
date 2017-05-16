@@ -22,6 +22,7 @@ include(GrPython)
 GR_PYTHON_INSTALL(
     PROGRAMS
     upsat_transceiver_cli.py
+    upsat_transceiver_cli_uhd_pa.py
     satnogs_noaa_apt_decoder.py
     DESTINATION bin
 )
