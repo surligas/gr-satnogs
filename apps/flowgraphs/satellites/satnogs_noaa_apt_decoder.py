@@ -5,7 +5,7 @@
 # Title: NOAA APT Decoder
 # Author: Manolis Surligas, George Vardakis
 # Description: A NOAA APT Decoder with automatic image synchronization
-# Generated: Fri Jun 23 15:41:33 2017
+# Generated: Tue Jul 18 15:50:26 2017
 ##################################################
 
 from gnuradio import analog
@@ -23,7 +23,7 @@ import time
 
 class satnogs_noaa_apt_decoder(gr.top_block):
 
-    def __init__(self, doppler_correction_per_sec=1000, image_file_path='/tmp/noaa.png', lo_offset=100e3, ppm=0, rigctl_port=4532, rx_freq=90.4e6, rx_sdr_device='usrpb200'):
+    def __init__(self, doppler_correction_per_sec=1000, image_file_path='/tmp/noaa.png', lo_offset=100e3, ppm=0, rigctl_port=4532, rx_freq=90.4e6, rx_sdr_device='usrpb200', waterfall_file_path='/tmp/waterfall.dat', file_path='/tmp/test.ogg'):
         gr.top_block.__init__(self, "NOAA APT Decoder")
 
         ##################################################
@@ -36,6 +36,8 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         self.rigctl_port = rigctl_port
         self.rx_freq = rx_freq
         self.rx_sdr_device = rx_sdr_device
+        self.waterfall_file_path = waterfall_file_path
+        self.file_path = file_path
 
         ##################################################
         # Variables
@@ -54,9 +56,17 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         ##################################################
         # Blocks
         ##################################################
+        self.satnogs_waterfall_sink_0 = satnogs.waterfall_sink(samp_rate_rx/ ( first_stage_decimation  * int(samp_rate_rx/ first_stage_decimation / initial_bandwidth)), 0.0, 8, 1024, waterfall_file_path, 0)
         self.satnogs_tcp_rigctl_msg_source_0 = satnogs.tcp_rigctl_msg_source("127.0.0.1", rigctl_port, False, 1000, 1500)
+        self.satnogs_ogg_encoder_0 = satnogs.ogg_encoder(file_path, 48000, 0.8)
         self.satnogs_noaa_apt_sink_0 = satnogs.noaa_apt_sink(image_file_path, 2080, 1500, True, False, False)
         self.satnogs_coarse_doppler_correction_cc_0 = satnogs.coarse_doppler_correction_cc(rx_freq, samp_rate_rx /first_stage_decimation)
+        self.rational_resampler_xxx_1 = filter.rational_resampler_fff(
+                interpolation=48000,
+                decimation=int(samp_rate_rx/ ( first_stage_decimation  * int(samp_rate_rx/ first_stage_decimation / initial_bandwidth)) / audio_decimation),
+                taps=None,
+                fractional_bw=None,
+        )
         self.rational_resampler_xxx_0_0 = filter.rational_resampler_fff(
                 interpolation=4160,
                 decimation=9600,
@@ -101,15 +111,18 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         ##################################################
         self.msg_connect((self.satnogs_tcp_rigctl_msg_source_0, 'freq'), (self.satnogs_coarse_doppler_correction_cc_0, 'freq'))
         self.connect((self.analog_wfm_rcv_0, 0), (self.band_pass_filter_0, 0))
+        self.connect((self.analog_wfm_rcv_0, 0), (self.rational_resampler_xxx_1, 0))
         self.connect((self.band_pass_filter_0, 0), (self.fir_filter_xxx_1, 0))
         self.connect((self.blocks_complex_to_mag_0, 0), (self.rational_resampler_xxx_0_0, 0))
         self.connect((self.fir_filter_xxx_0, 0), (self.analog_wfm_rcv_0, 0))
+        self.connect((self.fir_filter_xxx_0, 0), (self.satnogs_waterfall_sink_0, 0))
         self.connect((self.fir_filter_xxx_1, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.satnogs_coarse_doppler_correction_cc_0, 0))
         self.connect((self.hilbert_fc_0, 0), (self.blocks_complex_to_mag_0, 0))
         self.connect((self.osmosdr_source_0, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
         self.connect((self.rational_resampler_xxx_0, 0), (self.hilbert_fc_0, 0))
         self.connect((self.rational_resampler_xxx_0_0, 0), (self.satnogs_noaa_apt_sink_0, 0))
+        self.connect((self.rational_resampler_xxx_1, 0), (self.satnogs_ogg_encoder_0, 0))
         self.connect((self.satnogs_coarse_doppler_correction_cc_0, 0), (self.fir_filter_xxx_0, 0))
 
     def get_doppler_correction_per_sec(self):
@@ -163,6 +176,18 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         self.osmosdr_source_0.set_if_gain(satnogs.hw_rx_settings[self.rx_sdr_device]['if_gain'], 0)
         self.osmosdr_source_0.set_bb_gain(satnogs.hw_rx_settings[self.rx_sdr_device]['bb_gain'], 0)
         self.osmosdr_source_0.set_antenna(satnogs.hw_rx_settings[self.rx_sdr_device]['antenna'], 0)
+
+    def get_waterfall_file_path(self):
+        return self.waterfall_file_path
+
+    def set_waterfall_file_path(self, waterfall_file_path):
+        self.waterfall_file_path = waterfall_file_path
+
+    def get_file_path(self):
+        return self.file_path
+
+    def set_file_path(self, file_path):
+        self.file_path = file_path
 
     def get_samp_rate_rx(self):
         return self.samp_rate_rx
@@ -233,6 +258,12 @@ def argument_parser():
     parser.add_option(
         "", "--rx-sdr-device", dest="rx_sdr_device", type="string", default='usrpb200',
         help="Set rx_sdr_device [default=%default]")
+    parser.add_option(
+        "", "--waterfall-file-path", dest="waterfall_file_path", type="string", default='/tmp/waterfall.dat',
+        help="Set waterfall_file_path [default=%default]")
+    parser.add_option(
+        "", "--file-path", dest="file_path", type="string", default='/tmp/test.ogg',
+        help="Set file_path [default=%default]")
     return parser
 
 
@@ -240,7 +271,7 @@ def main(top_block_cls=satnogs_noaa_apt_decoder, options=None):
     if options is None:
         options, _ = argument_parser().parse_args()
 
-    tb = top_block_cls(doppler_correction_per_sec=options.doppler_correction_per_sec, image_file_path=options.image_file_path, lo_offset=options.lo_offset, ppm=options.ppm, rigctl_port=options.rigctl_port, rx_freq=options.rx_freq, rx_sdr_device=options.rx_sdr_device)
+    tb = top_block_cls(doppler_correction_per_sec=options.doppler_correction_per_sec, image_file_path=options.image_file_path, lo_offset=options.lo_offset, ppm=options.ppm, rigctl_port=options.rigctl_port, rx_freq=options.rx_freq, rx_sdr_device=options.rx_sdr_device, waterfall_file_path=options.waterfall_file_path, file_path=options.file_path)
     tb.start()
     tb.wait()
 
