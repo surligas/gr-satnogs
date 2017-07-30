@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 ##################################################
 # GNU Radio Python Flow Graph
-# Title: BPSK Generic Demodulation
+# Title: FM Generic Demodulation
 # Author: surligas, cshields, csete
-# Description: A generic BPSK demodulation block
-# Generated: Tue Jul 25 21:48:53 2017
+# Description: A generic CW demodulation block
+# Generated: Sun Jul 30 18:37:30 2017
 ##################################################
 
 from gnuradio import analog
@@ -23,8 +23,8 @@ import time
 
 class satnogs_cw_demod(gr.top_block):
 
-    def __init__(self, antenna=satnogs.not_set_antenna, bb_gain=satnogs.not_set_rx_bb_gain, cw_offset=1500, dev_args=satnogs.not_set_dev_args, doppler_correction_per_sec=20, file_path='test.wav', if_gain=satnogs.not_set_rx_if_gain, lo_offset=100e3, ppm=0, rf_gain=satnogs.not_set_rx_rf_gain, rigctl_port=4532, rx_freq=100e6, rx_sdr_device='usrpb200', waterfall_file_path='/tmp/waterfall.dat'):
-        gr.top_block.__init__(self, "BPSK Generic Demodulation")
+    def __init__(self, antenna=satnogs.not_set_antenna, bb_gain=satnogs.not_set_rx_bb_gain, cw_offset=700, dev_args=satnogs.not_set_dev_args, doppler_correction_per_sec=20, file_path='test.wav', if_gain=satnogs.not_set_rx_if_gain, lo_offset=100e3, ppm=0, rf_gain=satnogs.not_set_rx_rf_gain, rigctl_port=4532, rx_freq=100e6, rx_sdr_device='usrpb200', waterfall_file_path='/tmp/waterfall.dat'):
+        gr.top_block.__init__(self, "FM Generic Demodulation")
 
         ##################################################
         # Parameters
@@ -81,6 +81,8 @@ class satnogs_cw_demod(gr.top_block):
         	1, audio_samp_rate, 2000, 1000, firdes.WIN_HAMMING, 6.76))
         self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(int(samp_rate_rx/filter_rate), (xlate_filter_taps), lo_offset, samp_rate_rx)
         self.blocks_multiply_xx_0 = blocks.multiply_vcc(1)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, file_path+"iq.dat", False)
+        self.blocks_file_sink_0.set_unbuffered(False)
         self.blocks_complex_to_real_0 = blocks.complex_to_real(1)
         self.blks2_rational_resampler_xxx_1 = filter.rational_resampler_ccc(
                 interpolation=24,
@@ -104,6 +106,7 @@ class satnogs_cw_demod(gr.top_block):
         self.connect((self.blocks_multiply_xx_0, 0), (self.blocks_complex_to_real_0, 0))
         self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.blks2_rational_resampler_xxx_1, 0))
         self.connect((self.low_pass_filter_0, 0), (self.analog_agc2_xx_0_0, 0))
+        self.connect((self.low_pass_filter_0, 0), (self.blocks_file_sink_0, 0))
         self.connect((self.osmosdr_source_0, 0), (self.satnogs_coarse_doppler_correction_cc_0, 0))
         self.connect((self.satnogs_coarse_doppler_correction_cc_0, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
 
@@ -145,6 +148,7 @@ class satnogs_cw_demod(gr.top_block):
 
     def set_file_path(self, file_path):
         self.file_path = file_path
+        self.blocks_file_sink_0.open(self.file_path+"iq.dat")
 
     def get_if_gain(self):
         return self.if_gain
@@ -257,7 +261,7 @@ class satnogs_cw_demod(gr.top_block):
 
 
 def argument_parser():
-    description = 'A generic BPSK demodulation block'
+    description = 'A generic CW demodulation block'
     parser = OptionParser(usage="%prog: [options]", option_class=eng_option, description=description)
     parser.add_option(
         "", "--antenna", dest="antenna", type="string", default=satnogs.not_set_antenna,
@@ -266,7 +270,7 @@ def argument_parser():
         "", "--bb-gain", dest="bb_gain", type="eng_float", default=eng_notation.num_to_str(satnogs.not_set_rx_bb_gain),
         help="Set bb_gain [default=%default]")
     parser.add_option(
-        "", "--cw-offset", dest="cw_offset", type="eng_float", default=eng_notation.num_to_str(1500),
+        "", "--cw-offset", dest="cw_offset", type="eng_float", default=eng_notation.num_to_str(700),
         help="Set cw_offset [default=%default]")
     parser.add_option(
         "", "--dev-args", dest="dev_args", type="string", default=satnogs.not_set_dev_args,
