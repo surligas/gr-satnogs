@@ -47,6 +47,7 @@ namespace gr
       const double d_samp_rate;
       double d_pps;
       const size_t d_fft_size;
+      const size_t d_row_str_size;
       wf_mode_t d_mode;
       size_t d_refresh;
       size_t d_fft_cnt;
@@ -56,7 +57,20 @@ namespace gr
       gr_complex *d_shift_buffer;
       float *d_hold_buffer;
       float *d_tmp_buffer;
+      int8_t *d_int8_buffer;
       std::ofstream d_fos;
+
+      void
+      compute_decimation (const gr_complex *in, size_t n_fft);
+
+      void
+      compute_max_hold (const gr_complex *in, size_t n_fft);
+
+      void
+      compute_mean (const gr_complex *in, size_t n_fft);
+
+      void
+      write_str_row(const float *in, float timestamp);
 
     public:
       waterfall_sink_impl (double samp_rate, double center_freq,
@@ -68,15 +82,6 @@ namespace gr
       int
       work (int noutput_items, gr_vector_const_void_star &input_items,
             gr_vector_void_star &output_items);
-
-      void
-      compute_decimation(const gr_complex *in, size_t n_fft);
-
-      void
-      compute_max_hold(const gr_complex *in, size_t n_fft);
-
-      void
-      compute_mean(const gr_complex *in, size_t n_fft);
     };
 
   } // namespace satnogs

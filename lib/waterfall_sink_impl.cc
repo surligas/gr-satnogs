@@ -55,6 +55,7 @@ namespace gr
             d_samp_rate (samp_rate),
             d_pps (pps),
             d_fft_size (fft_size),
+            d_row_str_size (fft_size*(3+1+1+1) + 1),
             d_mode ((wf_mode_t)mode),
             d_refresh( (d_samp_rate / fft_size) / pps),
             d_fft_cnt(0),
@@ -62,7 +63,6 @@ namespace gr
             d_samples_cnt(0),
             d_fft (fft_size)
     {
-      float r = 0.0;
       const int alignment_multiple = volk_get_alignment ()
           / (fft_size * sizeof(gr_complex));
       set_alignment (std::max (1, alignment_multiple));
@@ -90,15 +90,32 @@ namespace gr
         throw std::runtime_error ("Could not allocate aligned memory");
       }
 
-      d_fos.open(filename, std::ios::binary | std::ios::trunc);
+      d_int8_buffer = (int8_t *) volk_malloc (fft_size * sizeof(int8_t),
+                                            volk_get_alignment ());
+      if (!d_int8_buffer) {
+        LOG_ERROR("Could not allocate aligned memory");
+        throw std::runtime_error ("Could not allocate aligned memory");
+      }
+
+      d_fos.open(filename, std::ios::trunc);
 
       /* Append header for proper plotting  */
-      r = fft_size;
-      d_fos.write((char *)&r, sizeof(float));
       for(size_t i = 0; i < fft_size; i++) {
-        r = (samp_rate/fft_size * i ) - samp_rate/2.0 + center_freq;
-        d_fos.write((char *)&r, sizeof(float));
+        d_fos << ", " << (samp_rate/fft_size * i ) - samp_rate/2.0 + center_freq;
       }
+      d_fos << std::endl;
+    }
+
+    void
+    waterfall_sink_impl::write_str_row (const float *in, float timestamp)
+    {
+      std::stringstream s;
+      volk_32f_s32f_convert_8i(d_int8_buffer, in, 1.0, d_fft_size);
+      s << timestamp;
+      for(size_t i = 0; i < d_fft_size; i++) {
+        s << ", " << d_int8_buffer[i] << std::endl;
+      }
+      d_fos << s.str();
     }
 
     /*
@@ -110,7 +127,9 @@ namespace gr
       volk_free(d_shift_buffer);
       volk_free(d_hold_buffer);
       volk_free(d_tmp_buffer);
+      volk_free(d_int8_buffer);
     }
+
 
     int
     waterfall_sink_impl::work (int noutput_items,
@@ -165,8 +184,7 @@ namespace gr
                                                         d_fft_size);
           /* Write the result to the file */
           t = (float)(d_samples_cnt / d_samp_rate);
-          d_fos.write((char *) &t, sizeof(float));
-          d_fos.write((char *) d_hold_buffer, d_fft_size * sizeof(float));
+          write_str_row(d_hold_buffer, t);
           d_fft_cnt = 0;
         }
         d_samples_cnt += d_fft_size;
@@ -209,8 +227,7 @@ namespace gr
 
           /* Write the result to the file */
           t = (float)(d_samples_cnt / d_samp_rate);
-          d_fos.write((char *) &t, sizeof(float));
-          d_fos.write((char *) d_hold_buffer, d_fft_size * sizeof(float));
+          write_str_row(d_hold_buffer, t);
 
           /* Reset */
           d_fft_cnt = 0;
@@ -252,8 +269,7 @@ namespace gr
 
           /* Write the result to the file */
           t = (float)(d_samples_cnt / d_samp_rate);
-          d_fos.write((char *) &t, sizeof(float));
-          d_fos.write((char *) d_hold_buffer, d_fft_size * sizeof(float));
+          write_str_row(d_hold_buffer, t);
 
           /* Reset */
           d_fft_cnt = 0;
