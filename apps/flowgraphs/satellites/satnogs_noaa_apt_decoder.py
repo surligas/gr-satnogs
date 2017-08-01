@@ -5,7 +5,7 @@
 # Title: NOAA APT Decoder
 # Author: Manolis Surligas, George Vardakis
 # Description: A NOAA APT Decoder with automatic image synchronization
-# Generated: Tue Jul 25 21:49:29 2017
+# Generated: Tue Aug  1 10:31:53 2017
 ##################################################
 
 from gnuradio import analog
@@ -64,7 +64,7 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         self.satnogs_waterfall_sink_0 = satnogs.waterfall_sink(samp_rate_rx/ ( first_stage_decimation  * int(samp_rate_rx/ first_stage_decimation / initial_bandwidth)), 0.0, 8, 1024, waterfall_file_path, 0)
         self.satnogs_tcp_rigctl_msg_source_0 = satnogs.tcp_rigctl_msg_source("127.0.0.1", rigctl_port, False, 1000/doppler_correction_per_sec, 1500)
         self.satnogs_ogg_encoder_0 = satnogs.ogg_encoder(file_path, 48000, 0.8)
-        self.satnogs_noaa_apt_sink_0 = satnogs.noaa_apt_sink(image_file_path, 2080, 1500, True, False, False)
+        self.satnogs_noaa_apt_sink_0 = satnogs.noaa_apt_sink(image_file_path, 2080, 1500, True, True, True)
         self.satnogs_coarse_doppler_correction_cc_0 = satnogs.coarse_doppler_correction_cc(rx_freq, samp_rate_rx /first_stage_decimation)
         self.rational_resampler_xxx_1 = filter.rational_resampler_fff(
                 interpolation=48000,
@@ -103,6 +103,8 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         self.fir_filter_xxx_1.declare_sample_delay(0)
         self.fir_filter_xxx_0 = filter.fir_filter_ccc(int(samp_rate_rx/ first_stage_decimation / initial_bandwidth), (noaa_filter_taps))
         self.fir_filter_xxx_0.declare_sample_delay(0)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, file_path+"iq.dat", False)
+        self.blocks_file_sink_0.set_unbuffered(False)
         self.blocks_complex_to_mag_0 = blocks.complex_to_mag(1)
         self.band_pass_filter_0 = filter.fir_filter_fff(1, firdes.band_pass(
         	6, samp_rate_rx/ ( first_stage_decimation  * int(samp_rate_rx/ first_stage_decimation / initial_bandwidth)) / audio_decimation, 500, 4.2e3, 200, firdes.WIN_HAMMING, 6.76))
@@ -120,6 +122,7 @@ class satnogs_noaa_apt_decoder(gr.top_block):
         self.connect((self.band_pass_filter_0, 0), (self.fir_filter_xxx_1, 0))
         self.connect((self.blocks_complex_to_mag_0, 0), (self.rational_resampler_xxx_0_0, 0))
         self.connect((self.fir_filter_xxx_0, 0), (self.analog_wfm_rcv_0, 0))
+        self.connect((self.fir_filter_xxx_0, 0), (self.blocks_file_sink_0, 0))
         self.connect((self.fir_filter_xxx_0, 0), (self.satnogs_waterfall_sink_0, 0))
         self.connect((self.fir_filter_xxx_1, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.satnogs_coarse_doppler_correction_cc_0, 0))
@@ -161,6 +164,7 @@ class satnogs_noaa_apt_decoder(gr.top_block):
 
     def set_file_path(self, file_path):
         self.file_path = file_path
+        self.blocks_file_sink_0.open(self.file_path+"iq.dat")
 
     def get_if_gain(self):
         return self.if_gain
