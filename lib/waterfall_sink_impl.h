@@ -52,7 +52,6 @@ namespace gr
       size_t d_refresh;
       size_t d_fft_cnt;
       size_t d_fft_shift;
-      size_t d_samples_cnt;
       fft::fft_complex d_fft;
       gr_complex *d_shift_buffer;
       float *d_hold_buffer;
@@ -70,7 +69,7 @@ namespace gr
       compute_mean (const gr_complex *in, size_t n_fft);
 
       void
-      write_str_row(const float *in, float timestamp);
+      write_str_row(const float *in);
 
     public:
       waterfall_sink_impl (double samp_rate, double center_freq,

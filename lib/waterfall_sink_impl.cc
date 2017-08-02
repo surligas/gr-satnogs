@@ -60,7 +60,6 @@ namespace gr
             d_refresh( (d_samp_rate / fft_size) / pps),
             d_fft_cnt(0),
             d_fft_shift((size_t)(ceil(fft_size/2.0))),
-            d_samples_cnt(0),
             d_fft (fft_size)
     {
       const int alignment_multiple = volk_get_alignment ()
@@ -99,23 +98,23 @@ namespace gr
 
       d_fos.open(filename, std::ios::trunc);
 
-      /* Append header for proper plotting  */
-      for(size_t i = 0; i < fft_size; i++) {
-        d_fos << ", " << (samp_rate/fft_size * i ) - samp_rate/2.0 + center_freq;
-      }
-      d_fos << std::endl;
+      /*
+       * Append header for proper plotting.
+       * Row time reference, FFT size, sampling rate, center frequency
+       */
+      d_fos << ((fft_size * d_refresh) / samp_rate) << ", " << fft_size << ", "
+          << samp_rate << ", " << center_freq << std::endl;
     }
 
     void
-    waterfall_sink_impl::write_str_row (const float *in, float timestamp)
+    waterfall_sink_impl::write_str_row (const float *in)
     {
       std::stringstream s;
       volk_32f_s32f_convert_8i(d_int8_buffer, in, 1.0, d_fft_size);
-      s << timestamp;
-      for(size_t i = 0; i < d_fft_size; i++) {
-        s << ", " << (int32_t) d_int8_buffer[i];
+      for(size_t i = 0; i < d_fft_size - 1; i++) {
+        s << (int32_t) d_int8_buffer[i] << ", ";
       }
-      d_fos << s.str() << std::endl;
+      d_fos << s.str() << (int32_t) d_int8_buffer[d_fft_size - 1] << std::endl;
     }
 
     /*
@@ -163,7 +162,6 @@ namespace gr
     waterfall_sink_impl::compute_decimation (const gr_complex* in, size_t n_fft)
     {
       size_t i;
-      float t;
       gr_complex *fft_in;
       for(i = 0; i < n_fft; i++){
         d_fft_cnt++;
@@ -183,11 +181,9 @@ namespace gr
                                                         (float) d_fft_size, 1.0,
                                                         d_fft_size);
           /* Write the result to the file */
-          t = (float)(d_samples_cnt / d_samp_rate);
-          write_str_row(d_hold_buffer, t);
+          write_str_row(d_hold_buffer);
           d_fft_cnt = 0;
         }
-        d_samples_cnt += d_fft_size;
       }
     }
 
@@ -196,7 +192,6 @@ namespace gr
     {
       size_t i;
       size_t j;
-      float t;
       gr_complex *fft_in;
       for(i = 0; i < n_fft; i++){
         fft_in = d_fft.get_inbuf ();
@@ -226,14 +221,12 @@ namespace gr
           }
 
           /* Write the result to the file */
-          t = (float)(d_samples_cnt / d_samp_rate);
-          write_str_row(d_hold_buffer, t);
+          write_str_row(d_hold_buffer);
 
           /* Reset */
           d_fft_cnt = 0;
           memset(d_hold_buffer, 0, d_fft_size * sizeof(float));
         }
-        d_samples_cnt += d_fft_size;
       }
     }
 
@@ -242,7 +235,6 @@ namespace gr
     {
       size_t i;
       size_t j;
-      float t;
       gr_complex *fft_in;
       for(i = 0; i < n_fft; i++){
         fft_in = d_fft.get_inbuf ();
@@ -268,14 +260,12 @@ namespace gr
               (float) d_fft_cnt * d_fft_size, 1.0, d_fft_size);
 
           /* Write the result to the file */
-          t = (float)(d_samples_cnt / d_samp_rate);
-          write_str_row(d_hold_buffer, t);
+          write_str_row(d_hold_buffer);
 
           /* Reset */
           d_fft_cnt = 0;
           memset(d_hold_buffer, 0, 2 * d_fft_size * sizeof(float));
         }
-        d_samples_cnt += d_fft_size;
       }
     }
 
