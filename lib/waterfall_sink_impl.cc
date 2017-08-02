@@ -113,9 +113,9 @@ namespace gr
       volk_32f_s32f_convert_8i(d_int8_buffer, in, 1.0, d_fft_size);
       s << timestamp;
       for(size_t i = 0; i < d_fft_size; i++) {
-        s << ", " << d_int8_buffer[i] << std::endl;
+        s << ", " << (int32_t) d_int8_buffer[i];
       }
-      d_fos << s.str();
+      d_fos << s.str() << std::endl;
     }
 
     /*
