@@ -34,6 +34,7 @@
 #include "satnogs/ogg_source.h"
 #include "satnogs/noaa_apt_sink.h"
 #include "satnogs/frame_file_sink.h"
+#include "satnogs/cw_encoder.h"
 %}
 
 
@@ -105,3 +106,5 @@ GR_SWIG_BLOCK_MAGIC2(satnogs, ogg_source);
 GR_SWIG_BLOCK_MAGIC2(satnogs, noaa_apt_sink);
 %include "satnogs/frame_file_sink.h"
 GR_SWIG_BLOCK_MAGIC2(satnogs, frame_file_sink);
+%include "satnogs/cw_encoder.h"
+GR_SWIG_BLOCK_MAGIC2(satnogs, cw_encoder);
